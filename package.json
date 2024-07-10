@@ -2,7 +2,7 @@
   "name": "track-markdown-updated",
   "displayName": "Track markdown updated",
   "description": "Keep track of changes in the hexo blog md file and update the updated field time",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "publisher": "haukuen",
   "engines": {
     "vscode": "^1.91.0"
@@ -14,7 +14,34 @@
     "onLanguage:markdown"
   ],
   "main": "./out/extension.js",
-  "contributes": {},
+  "contributes": {
+    "configuration": {
+      "type": "object",
+      "title": "Track Markdown Updated",
+      "properties": {
+        "track-markdown-updated.autoAddUpdatedField": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically add the 'updated' field if it doesn't exist"
+        }
+      }
+    },
+    "commands": [
+      {
+        "command": "track-markdown-updated.openSettings",
+        "title": "Open Track Markdown Updated Settings"
+      }
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "when": "editorLangId == markdown",
+          "command": "track-markdown-updated.openSettings",
+          "group": "navigation"
+        }
+      ]
+    }
+  },
   "scripts": {
     "vscode:prepublish": "npm run compile",
     "compile": "tsc -p ./",
