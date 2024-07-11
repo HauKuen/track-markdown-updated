@@ -20,6 +20,10 @@ This VS Code extension automatically tracks changes in Hexo blog Markdown files 
 - VS Code version 1.91.0 or higher.
 
 
+## ChangeLog
+
+See the [CHANGELOG](https://github.com/HauKuen/track-markdown-updated/blob/main/CHANGELOG.md) for the latest updates.
+
 
 ---
 
