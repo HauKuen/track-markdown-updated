@@ -5,25 +5,31 @@ const fileHashes = new Map<string, string>();
 
 export function activate(context: vscode.ExtensionContext) {
     let disposable = vscode.workspace.onDidSaveTextDocument((document: vscode.TextDocument) => {
-        if (document.languageId === 'markdown') {
+        if (document.languageId === 'markdown' && hasValidHeader(document)) {
             updateMarkdownHeaderIfChanged(document);
         }
     });
     context.subscriptions.push(disposable);
 
-    // Listen for document open events, record the initial content hash
+    // 监听文档打开事件，记录初始内容hash
     vscode.workspace.onDidOpenTextDocument((document: vscode.TextDocument) => {
-        if (document.languageId === 'markdown') {
+        if (document.languageId === 'markdown' && hasValidHeader(document)) {
             const initialHash = calculateHash(document.getText());
             fileHashes.set(document.uri.toString(), initialHash);
         }
     });
 
-    // Add a command to open extension settings
+    // 添加命令打开扩展设置
     let openSettingsCommand = vscode.commands.registerCommand('track-markdown-updated.openSettings', () => {
         vscode.commands.executeCommand('workbench.action.openSettings', 'track-markdown-updated');
     });
     context.subscriptions.push(openSettingsCommand);
+}
+
+function hasValidHeader(document: vscode.TextDocument): boolean {
+    const content = document.getText();
+    const headerRegex = /^---\s*\n[\s\S]*?\n---/;
+    return headerRegex.test(content);
 }
 
 async function updateMarkdownHeaderIfChanged(document: vscode.TextDocument) {
@@ -32,7 +38,7 @@ async function updateMarkdownHeaderIfChanged(document: vscode.TextDocument) {
     const currentContent = document.getText();
     const currentHash = calculateHash(currentContent);
 
-    // If the hash hasn't changed, don't update
+    // 如果hash没有改变，不更新
     if (currentHash === initialHash) {
         return;
     }
@@ -58,17 +64,8 @@ async function updateMarkdownHeaderIfChanged(document: vscode.TextDocument) {
             await vscode.workspace.applyEdit(edit);
             await document.save();
         }
-    } else if (autoAddUpdatedField) {
-        // If there's no YAML front matter and autoAddUpdatedField is true, add it
-        const updatedHeader = updateUpdatedField('');
-        const newText = `---\n${updatedHeader}\n---\n\n${currentContent}`;
-        const edit = new vscode.WorkspaceEdit();
-        edit.insert(document.uri, new vscode.Position(0, 0), newText);
-        await vscode.workspace.applyEdit(edit);
-        await document.save();
     }
 
-    // Update the file hash after changes
     fileHashes.set(documentUri, currentHash);
 }
 
