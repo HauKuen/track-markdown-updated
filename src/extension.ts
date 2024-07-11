@@ -128,3 +128,4 @@ function calculateHash(content: string): string {
 }
 
 export function deactivate() {}
+export {hasValidHeader};
