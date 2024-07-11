@@ -3,10 +3,20 @@ import * as crypto from 'crypto';
 
 const fileHashes = new Map<string, string>();
 
+const debounce = (func: Function, delay: number) => {
+    let timeoutId: NodeJS.Timeout;
+    return (...args: any[]) => {
+        clearTimeout(timeoutId);
+        timeoutId = setTimeout(() => func(...args), delay);
+    };
+};
+
+const debouncedUpdateMarkdownHeader = debounce(updateMarkdownHeaderIfChanged, 1000);
+
 export function activate(context: vscode.ExtensionContext) {
     let disposable = vscode.workspace.onDidSaveTextDocument((document: vscode.TextDocument) => {
         if (document.languageId === 'markdown' && hasValidHeader(document)) {
-            updateMarkdownHeaderIfChanged(document);
+            debouncedUpdateMarkdownHeader(document);
         }
     });
     context.subscriptions.push(disposable);
