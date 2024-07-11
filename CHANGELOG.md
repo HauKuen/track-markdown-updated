@@ -7,6 +7,13 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 ## [Unreleased]
 
 
+## [0.1.1] - 2024-07-11
+
+### Changed
+
+- Added debounce processing for page update detection (对页面更新检测增加防抖处理)
+
+
 ## [0.1.0] - 2024-07-11
 
 ### Fixed
