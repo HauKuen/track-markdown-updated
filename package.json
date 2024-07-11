@@ -2,7 +2,7 @@
   "name": "track-markdown-updated",
   "displayName": "Track markdown updated",
   "description": "Keep track of changes in the hexo blog md file and update the updated field time",
-  "version": "0.0.2",
+  "version": "0.1.0",
   "publisher": "haukuen",
   "engines": {
     "vscode": "^1.91.0"

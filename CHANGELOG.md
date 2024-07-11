@@ -7,6 +7,12 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 ## [Unreleased]
 
 
+## [0.1.0] - 2024-07-11
+
+### Fixed
+
+- The ``updated`` field is no longer automatically added to non-target md files (非目标md文件不再会自动添加``updated``字段)
+
 ## [0.0.2] - 2024-07-10
 
 ### Added
