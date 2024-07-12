@@ -3,32 +3,15 @@ import * as crypto from 'crypto';
 
 const fileHashes = new Map<string, string>();
 
-/**
- * 函数防抖动处理
- * @param func 要执行的函数
- * @param delay 延迟的时间
- * @returns 返回一个防抖后的函数
- */
-const debounce = (func: Function, delay: number) => {
-    let timeoutId: NodeJS.Timeout;
-    return (...args: any[]) => {
-        clearTimeout(timeoutId);
-        timeoutId = setTimeout(() => func(...args), delay);
-    };
-};
-
-const debouncedUpdateMarkdownHeader = debounce(updateMarkdownHeaderIfChanged, 1000);
 
 /**
  * 扩展激活时的入口函数
  * @param context 扩展上下文
  */
 export function activate(context: vscode.ExtensionContext) {
-    // 监听文本文件保存事件
-    let disposable = vscode.workspace.onDidSaveTextDocument((document: vscode.TextDocument) => {
-        // 当保存的是Markdown文件且包含有效标题时，触发更新操作
-        if (document.languageId === 'markdown' && hasValidHeader(document)) {
-            debouncedUpdateMarkdownHeader(document);
+    let disposable = vscode.workspace.onWillSaveTextDocument((event: vscode.TextDocumentWillSaveEvent) => {
+        if (event.document.languageId === 'markdown' && hasValidHeader(event.document)) {
+            event.waitUntil(updateMarkdownHeaderIfChanged(event.document));
         }
     });
     context.subscriptions.push(disposable);
@@ -36,8 +19,14 @@ export function activate(context: vscode.ExtensionContext) {
     // 监听文档打开事件，记录初始内容hash
     vscode.workspace.onDidOpenTextDocument((document: vscode.TextDocument) => {
         if (document.languageId === 'markdown' && hasValidHeader(document)) {
-            const initialHash = calculateHash(document.getText());
-            fileHashes.set(document.uri.toString(), initialHash);
+            const content = document.getText();
+            const headerRegex = /^---\s*\n([\s\S]*?)\n---/;
+            const match = content.match(headerRegex);
+            if (match) {
+                const contentWithoutHeader = content.replace(headerRegex, '');
+                const initialHash = calculateHash(contentWithoutHeader);
+                fileHashes.set(document.uri.toString(), initialHash);
+            }
         }
     });
 
@@ -63,43 +52,45 @@ function hasValidHeader(document: vscode.TextDocument): boolean {
  * 如果文档的标题已更改，则更新标题中的更新时间字段
  * @param document 要检查的Markdown文档
  */
-async function updateMarkdownHeaderIfChanged(document: vscode.TextDocument) {
+async function updateMarkdownHeaderIfChanged(document: vscode.TextDocument): Promise<vscode.TextEdit[]> {
     const documentUri = document.uri.toString();
-    const initialHash = fileHashes.get(documentUri);
     const currentContent = document.getText();
-    const currentHash = calculateHash(currentContent);
+    const headerRegex = /^---\s*\n([\s\S]*?)\n---/;
+    const match = currentContent.match(headerRegex);
 
-    // 如果hash没有改变，不更新
+    if (!match) {
+        return [];
+    }
+
+    const header = match[1];
+    const contentWithoutHeader = currentContent.replace(headerRegex, '');
+
+    // 计算不包含header的内容的哈希值
+    const currentHash = calculateHash(contentWithoutHeader);
+    const initialHash = fileHashes.get(documentUri);
+
     if (currentHash === initialHash) {
-        return;
+        return [];
     }
 
     const config = vscode.workspace.getConfiguration('track-markdown-updated');
     const autoAddUpdatedField = config.get('autoAddUpdatedField', true);
 
-    const headerRegex = /^---\s*\n([\s\S]*?)\n---/;
-    const match = currentContent.match(headerRegex);
+    let updatedHeader = header;
 
-    if (match) {
-        const header = match[1];
-        let updatedHeader = header;
-
-        // 根据配置决定是否添加或更新更新时间字段
-        if (header.includes('updated:') || autoAddUpdatedField) {
-            updatedHeader = updateUpdatedField(header);
-        }
-
-        // 如果标题已更新，则应用更改
-        if (updatedHeader !== header) {
-            const newText = currentContent.replace(headerRegex, `---\n${updatedHeader}\n---`);
-            const edit = new vscode.WorkspaceEdit();
-            edit.replace(document.uri, new vscode.Range(0, 0, document.lineCount, 0), newText);
-            await vscode.workspace.applyEdit(edit);
-            await document.save();
-        }
+    if (header.includes('updated:') || autoAddUpdatedField) {
+        updatedHeader = updateUpdatedField(header);
     }
 
+    if (updatedHeader !== header) {
+        const newText = currentContent.replace(headerRegex, `---\n${updatedHeader}\n---`);
+        fileHashes.set(documentUri, currentHash);
+        return [vscode.TextEdit.replace(new vscode.Range(0, 0, document.lineCount, 0), newText)];
+    }
+
+    // 如果没有需要更新的内容，返回空数组
     fileHashes.set(documentUri, currentHash);
+    return []; 
 }
 
 /**
@@ -128,4 +119,4 @@ function calculateHash(content: string): string {
 }
 
 export function deactivate() {}
-export {hasValidHeader};
+export {hasValidHeader, updateUpdatedField};
